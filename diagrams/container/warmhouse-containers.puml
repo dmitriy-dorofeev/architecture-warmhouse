@@ -43,6 +43,7 @@ Rel(automation_svc, kafka, "Читает телеметрию, публикуе�
 Rel(telemetry_svc, kafka, "Читает события измерений")
 Rel(device_gw, kafka, "Публикует телеметрию и статусы, читает команды")
 
-Rel(device_gw, devices, "Опрос датчиков, команды реле, приём событий", "MQTT")
+Rel(devices, device_gw, "Устанавливают постоянное соединение, публикуют телеметрию и статусы", "MQTT")
+Rel(device_gw, devices, "Отправляет команды вкл/выкл", "MQTT")
 
 @enduml
