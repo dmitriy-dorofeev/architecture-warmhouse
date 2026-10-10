@@ -1,0 +1,89 @@
+@startuml warmhouse-er
+hide circle
+skinparam linetype ortho
+
+title ER-диаграмма — экосистема «Тёплый дом»
+
+entity "users" as user {
+  * id : uuid <<PK>>
+  --
+  * email : varchar
+  * password_hash : varchar
+  name : varchar
+  * created_at : timestamptz
+}
+
+entity "houses" as house {
+  * id : uuid <<PK>>
+  --
+  * user_id : uuid <<FK>>
+  * name : varchar
+  address : varchar
+  timezone : varchar
+}
+
+entity "modules" as module {
+  * id : uuid <<PK>>
+  --
+  * house_id : uuid <<FK>>
+  * name : varchar
+  description : text
+}
+
+entity "device_types" as dtype {
+  * id : uuid <<PK>>
+  --
+  * code : varchar
+  * name : varchar
+  protocol : varchar
+}
+
+entity "devices" as device {
+  * id : uuid <<PK>>
+  --
+  * type_id : uuid <<FK>>
+  * module_id : uuid <<FK>>
+  * serial_number : varchar
+  name : varchar
+  * status : varchar
+  last_seen_at : timestamptz
+}
+
+entity "telemetry_data" as telemetry {
+  * id : bigint <<PK>>
+  --
+  * device_id : uuid <<FK>>
+  * value : float
+  unit : varchar
+  * recorded_at : timestamptz
+}
+
+entity "scenarios" as scenario {
+  * id : uuid <<PK>>
+  --
+  * house_id : uuid <<FK>>
+  * name : varchar
+  trigger_conditions : jsonb
+  actions : jsonb
+  * is_active : boolean
+}
+
+entity "commands" as command {
+  * id : uuid <<PK>>
+  --
+  * device_id : uuid <<FK>>
+  * command : varchar
+  * status : varchar
+  * created_at : timestamptz
+  executed_at : timestamptz
+}
+
+user ||--o{ house : "владеет"
+house ||--o{ module : "состоит из"
+module ||--o{ device : "включает"
+dtype ||--o{ device : "задаёт тип"
+device ||--o{ telemetry : "генерирует"
+device ||--o{ command : "выполняет"
+house ||--o{ scenario : "настраивает"
+
+@enduml

@@ -1,0 +1,49 @@
+@startuml warmhouse-containers
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Container.puml
+
+title Container диаграмма — экосистема «Тёплый дом» (To-Be)
+
+Person(user, "Пользователь", "Владелец дома. Сам подключает устройства, настраивает сценарии, смотрит телеметрию")
+
+Container(web, "Web App", "SPA, JavaScript", "Веб-интерфейс самообслуживания: устройства, сценарии, телеметрия")
+Container(gateway, "API Gateway", "Go / Kong", "Единая точка входа. Маршрутизация запросов, аутентификация")
+
+Container(user_svc, "User Service", "Go", "Пользователи, дома, права доступа")
+ContainerDb(user_db, "User DB", "PostgreSQL", "Пользователи и дома")
+
+Container(device_svc, "Device Service", "Go", "Каталог модулей, регистрация устройств, состояние, отправка команд")
+ContainerDb(device_db, "Device DB", "PostgreSQL", "Устройства, типы, состояния")
+
+Container(telemetry_svc, "Telemetry Service", "Go", "Приём, хранение и выдача телеметрии, история показаний")
+ContainerDb(telemetry_db, "Telemetry DB", "TimescaleDB", "Временные ряды показаний датчиков")
+
+Container(automation_svc, "Automation Service", "Go", "Пользовательские сценарии: триггер по телеметрии -> команда устройству")
+ContainerDb(automation_db, "Automation DB", "PostgreSQL", "Сценарии и их настройки")
+
+Container(device_gw, "Device Gateway", "Go", "Подключение устройств партнёров по стандартным протоколам")
+ContainerQueue(kafka, "Message Broker", "Kafka", "События телеметрии, команды устройствам, события статусов")
+
+System_Ext(devices, "Устройства в доме", "Датчики и реле партнёров: отопление, свет, ворота, камеры")
+
+Rel(user, web, "Работает в браузере", "HTTPS")
+Rel(web, gateway, "Запросы к API", "HTTPS, REST")
+
+Rel(gateway, user_svc, "Аутентификация, профили, дома", "REST")
+Rel(gateway, device_svc, "Управление устройствами", "REST")
+Rel(gateway, telemetry_svc, "Запросы телеметрии и истории", "REST")
+Rel(gateway, automation_svc, "Настройка сценариев", "REST")
+
+Rel(user_svc, user_db, "Читает и пишет", "SQL")
+Rel(device_svc, device_db, "Читает и пишет", "SQL")
+Rel(telemetry_svc, telemetry_db, "Читает и пишет", "SQL")
+Rel(automation_svc, automation_db, "Читает и пишет", "SQL")
+
+Rel(device_svc, kafka, "Публикует команды устройствам, читает события статусов")
+Rel(automation_svc, kafka, "Читает телеметрию, публикует команды по сценариям")
+Rel(telemetry_svc, kafka, "Читает события измерений")
+Rel(device_gw, kafka, "Публикует телеметрию и статусы, читает команды")
+
+Rel(devices, device_gw, "Устанавливают постоянное соединение, публикуют телеметрию и статусы", "MQTT")
+Rel(device_gw, devices, "Отправляет команды вкл/выкл", "MQTT")
+
+@enduml

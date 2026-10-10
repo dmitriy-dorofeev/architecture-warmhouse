@@ -1,0 +1,307 @@
+openapi: 3.0.3
+info:
+  title: Device Service API
+  description: |
+    Управление устройствами умного дома: регистрация устройств пользователем,
+    просмотр состояния, отправка команд.
+  version: 1.0.0
+servers:
+  - url: http://localhost:8082/api/v1
+    description: Локальная разработка
+
+tags:
+  - name: devices
+    description: Операции с устройствами
+
+paths:
+  /devices:
+    get:
+      tags: [devices]
+      summary: Список устройств дома
+      parameters:
+        - name: house_id
+          in: query
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Список устройств
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Device'
+              examples:
+                devices:
+                  value:
+                    - id: 3fa85f64-5717-4562-b3fc-2c963f66afa6
+                      type: heating
+                      name: Отопление в гостиной
+                      serial_number: HT-2024-0001
+                      status: active
+                    - id: 7cb91e22-9a34-4c1d-8e55-1a2b3c4d5e6f
+                      type: light
+                      name: Свет в спальне
+                      serial_number: LT-2024-0042
+                      status: inactive
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    post:
+      tags: [devices]
+      summary: Регистрация нового устройства
+      description: Пользователь сам регистрирует купленное устройство по серийному номеру.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DeviceRegisterRequest'
+            examples:
+              register:
+                value:
+                  serial_number: GT-2024-0100
+                  module_id: 1f2e3d4c-5b6a-7980-8172-a3b4c5d6e7f8
+                  name: Автоматические ворота
+      responses:
+        '201':
+          description: Устройство зарегистрировано
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Device'
+              examples:
+                created:
+                  value:
+                    id: 9d8c7b6a-5f4e-3d2c-1b0a-998877665544
+                    type: gate
+                    name: Автоматические ворота
+                    serial_number: GT-2024-0100
+                    status: inactive
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          description: Модуль не найден
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                moduleNotFound:
+                  value:
+                    error: module not found
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /devices/{deviceId}:
+    get:
+      tags: [devices]
+      summary: Информация об устройстве
+      parameters:
+        - $ref: '#/components/parameters/DeviceId'
+      responses:
+        '200':
+          description: Данные устройства
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Device'
+              examples:
+                device:
+                  value:
+                    id: 3fa85f64-5717-4562-b3fc-2c963f66afa6
+                    type: heating
+                    name: Отопление в гостиной
+                    serial_number: HT-2024-0001
+                    status: active
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /devices/{deviceId}/state:
+    patch:
+      tags: [devices]
+      summary: Обновление состояния устройства
+      description: Включить или выключить устройство.
+      parameters:
+        - $ref: '#/components/parameters/DeviceId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DeviceStateRequest'
+            examples:
+              turnOn:
+                value:
+                  status: active
+      responses:
+        '200':
+          description: Состояние обновлено
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Device'
+              examples:
+                updated:
+                  value:
+                    id: 3fa85f64-5717-4562-b3fc-2c963f66afa6
+                    type: heating
+                    name: Отопление в гостиной
+                    serial_number: HT-2024-0001
+                    status: active
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /devices/{deviceId}/commands:
+    post:
+      tags: [devices]
+      summary: Отправка команды устройству
+      description: |
+        Команда ставится в очередь (Kafka) и доставляется устройству асинхронно,
+        поэтому в ответ возвращается 202 и идентификатор команды для отслеживания.
+      parameters:
+        - $ref: '#/components/parameters/DeviceId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CommandRequest'
+            examples:
+              turnOff:
+                value:
+                  command: turn_off
+              setTemperature:
+                value:
+                  command: set_temperature
+                  params:
+                    value: 22.5
+      responses:
+        '202':
+          description: Команда принята в обработку
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CommandAccepted'
+              examples:
+                accepted:
+                  value:
+                    command_id: 0e1d2c3b-4a59-6877-8695-a4b3c2d1e0f9
+                    status: sent
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+components:
+  parameters:
+    DeviceId:
+      name: deviceId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+
+  schemas:
+    Device:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        type:
+          type: string
+          enum: [heating, light, gate, camera, sensor]
+        name:
+          type: string
+        serial_number:
+          type: string
+        status:
+          type: string
+          enum: [active, inactive, offline]
+    DeviceRegisterRequest:
+      type: object
+      required: [serial_number, module_id]
+      properties:
+        serial_number:
+          type: string
+        module_id:
+          type: string
+          format: uuid
+        name:
+          type: string
+    DeviceStateRequest:
+      type: object
+      required: [status]
+      properties:
+        status:
+          type: string
+          enum: [active, inactive]
+    CommandRequest:
+      type: object
+      required: [command]
+      properties:
+        command:
+          type: string
+          enum: [turn_on, turn_off, lock, unlock, set_temperature]
+        params:
+          type: object
+    CommandAccepted:
+      type: object
+      properties:
+        command_id:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum: [sent, delivered, failed]
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+
+  responses:
+    BadRequest:
+      description: Некорректный запрос
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          examples:
+            badRequest:
+              value:
+                error: invalid request body
+    NotFound:
+      description: Устройство не найдено
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          examples:
+            notFound:
+              value:
+                error: device not found
+    InternalError:
+      description: Внутренняя ошибка сервера
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          examples:
+            internal:
+              value:
+                error: internal server error

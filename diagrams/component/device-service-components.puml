@@ -1,0 +1,32 @@
+@startuml device-service-components
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Component.puml
+
+title Component диаграмма — Device Service
+
+Container(gateway, "API Gateway", "Go / Kong", "Маршрутизирует запросы от веб-клиента")
+ContainerDb(device_db, "Device DB", "PostgreSQL", "Устройства, типы, состояния")
+ContainerQueue(kafka, "Message Broker", "Kafka", "Команды устройствам и события статусов")
+
+Container_Boundary(device_svc, "Device Service") {
+  Component(api, "REST API", "Go, Gin", "HTTP-эндпоинты: список устройств, регистрация, состояние, команды")
+  Component(registry, "Реестр устройств", "Go", "Самостоятельная регистрация и настройка устройств пользователем, каталог модулей")
+  Component(command_handler, "Обработчик команд", "Go", "Валидация команд и постановка их в очередь")
+  Component(state_manager, "Менеджер состояния устройств", "Go", "Хранит актуальное состояние, обновляет его по событиям от устройств")
+  Component(repo, "Репозиторий устройств", "Go, pgx", "Доступ к Device DB")
+  Component(publisher, "Публикатор событий", "Go", "Отправка команд и событий в Kafka")
+  Component(consumer, "Консьюмер событий", "Go", "Читает события статусов устройств из Kafka")
+}
+
+Rel(gateway, api, "Проксирует запросы", "REST")
+Rel(api, registry, "Регистрация и каталог")
+Rel(api, command_handler, "Команды от пользователя")
+Rel(api, state_manager, "Запрос состояния")
+Rel(registry, repo, "Сохраняет устройство")
+Rel(state_manager, repo, "Читает и обновляет состояние")
+Rel(command_handler, publisher, "Передаёт команду")
+Rel(consumer, state_manager, "Событие статуса")
+Rel(repo, device_db, "SQL")
+Rel(publisher, kafka, "Публикует команды")
+Rel(consumer, kafka, "Подписан на события статусов")
+
+@enduml
