@@ -23,16 +23,18 @@ jobs:
         java-version: '11'
         distribution: 'temurin'
 
-    - name: Install PlantUML
-      run: sudo apt-get install plantuml
+    - name: Install Graphviz and download PlantUML
+      run: |
+        sudo apt-get update && sudo apt-get install -y graphviz
+        curl -L -o plantuml.jar https://github.com/plantuml/plantuml/releases/latest/download/plantuml.jar
 
     - name: Generate Diagrams
       run: |
-        plantuml diagrams/context/*.puml
-        plantuml diagrams/container/*.puml
-        plantuml diagrams/component/*.puml
-        plantuml diagrams/code/*.puml
-        plantuml diagrams/er/*.puml
+        java -jar plantuml.jar diagrams/context/*.puml
+        java -jar plantuml.jar diagrams/container/*.puml
+        java -jar plantuml.jar diagrams/component/*.puml
+        java -jar plantuml.jar diagrams/code/*.puml
+        java -jar plantuml.jar diagrams/er/*.puml
 
     - name: Commit Diagrams
       run: |
