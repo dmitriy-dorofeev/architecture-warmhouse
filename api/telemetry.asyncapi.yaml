@@ -1,0 +1,109 @@
+asyncapi: 3.0.0
+info:
+  title: Telemetry and Device Events API
+  description: |
+    Асинхронные события экосистемы «Тёплый дом» через Kafka.
+    Device Gateway публикует измерения и статусы устройств,
+    остальные сервисы (Telemetry Service, Device Service, Automation Service) на них подписываются.
+  version: 1.0.0
+
+servers:
+  kafka:
+    host: kafka:9092
+    protocol: kafka
+
+channels:
+  telemetryMeasurements:
+    address: telemetry.measurements
+    description: Новые измерения от датчиков
+    messages:
+      TemperatureMeasured:
+        $ref: '#/components/messages/TemperatureMeasured'
+  deviceStatus:
+    address: devices.status
+    description: События изменения состояния устройств
+    messages:
+      DeviceStatusChanged:
+        $ref: '#/components/messages/DeviceStatusChanged'
+
+operations:
+  publishMeasurement:
+    action: send
+    channel:
+      $ref: '#/channels/telemetryMeasurements'
+    summary: Device Gateway публикует измерение
+  consumeMeasurement:
+    action: receive
+    channel:
+      $ref: '#/channels/telemetryMeasurements'
+    summary: Telemetry Service сохраняет измерение
+  publishStatus:
+    action: send
+    channel:
+      $ref: '#/channels/deviceStatus'
+    summary: Device Gateway публикует статус устройства
+  consumeStatus:
+    action: receive
+    channel:
+      $ref: '#/channels/deviceStatus'
+    summary: Device Service обновляет состояние устройства
+
+components:
+  messages:
+    TemperatureMeasured:
+      summary: Новое измерение температуры
+      payload:
+        $ref: '#/components/schemas/TemperatureMeasuredPayload'
+      examples:
+        - payload:
+            device_id: 3fa85f64-5717-4562-b3fc-2c963f66afa6
+            house_id: 1f2e3d4c-5b6a-7980-8172-a3b4c5d6e7f8
+            value: 21.4
+            unit: celsius
+            measured_at: '2026-10-10T12:34:56Z'
+    DeviceStatusChanged:
+      summary: Устройство сменило состояние
+      payload:
+        $ref: '#/components/schemas/DeviceStatusChangedPayload'
+      examples:
+        - payload:
+            device_id: 3fa85f64-5717-4562-b3fc-2c963f66afa6
+            old_status: inactive
+            new_status: active
+            changed_at: '2026-10-10T12:35:01Z'
+
+  schemas:
+    TemperatureMeasuredPayload:
+      type: object
+      required: [device_id, house_id, value, unit, measured_at]
+      properties:
+        device_id:
+          type: string
+          format: uuid
+        house_id:
+          type: string
+          format: uuid
+        value:
+          type: number
+        unit:
+          type: string
+          enum: [celsius, percent, lux]
+        measured_at:
+          type: string
+          format: date-time
+    DeviceStatusChangedPayload:
+      type: object
+      required: [device_id, old_status, new_status, changed_at]
+      properties:
+        device_id:
+          type: string
+          format: uuid
+        old_status:
+          type: string
+          enum: [active, inactive, offline]
+        new_status:
+          type: string
+          enum: [active, inactive, offline]
+        changed_at:
+          type: string
+          format: date-time
