@@ -1,0 +1,30 @@
+@startuml device-command-sequence
+
+title Диаграмма последовательности — пользователь отправляет команду устройству
+
+actor "Пользователь" as user
+participant "Web App" as web
+participant "API Gateway" as gateway
+participant "Device Service" as device_svc
+collections "Kafka" as kafka
+participant "Device Gateway" as device_gw
+participant "Устройство в доме" as device
+database "Device DB" as device_db
+
+user -> web: Выключает свет в приложении
+web -> gateway: POST /api/v1/devices/{id}/commands\n{ "command": "turn_off" }
+gateway -> device_svc: Проксирует запрос\n(проверив токен)
+device_svc -> device_db: Проверяет, что устройство\nсуществует и принадлежит дому
+device_svc -> kafka: Публикует команду\n(топик device-commands)
+device_svc --> gateway: 202 Accepted, command_id
+gateway --> web: 202 Accepted
+web --> user: "Команда отправлена"
+
+kafka -> device_gw: Доставляет команду
+device_gw -> device: Отправляет команду по MQTT
+device --> device_gw: Подтверждение, новый статус off
+device_gw -> kafka: Публикует событие статуса\n(топик device-status)
+kafka -> device_svc: Событие DeviceStatusChanged
+device_svc -> device_db: Обновляет состояние устройства
+
+@enduml

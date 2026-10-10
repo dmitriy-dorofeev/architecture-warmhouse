@@ -1,0 +1,24 @@
+@startuml telemetry-service-components
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Component.puml
+
+title Component диаграмма — Telemetry Service
+
+Container(gateway, "API Gateway", "Go / Kong", "Маршрутизирует запросы от веб-клиента")
+ContainerDb(telemetry_db, "Telemetry DB", "TimescaleDB", "Временные ряды показаний датчиков")
+ContainerQueue(kafka, "Message Broker", "Kafka", "События измерений от устройств")
+
+Container_Boundary(telemetry_svc, "Telemetry Service") {
+  Component(api, "REST API", "Go, Gin", "Текущие показания и история телеметрии")
+  Component(consumer, "Консьюмер телеметрии", "Go", "Читает события измерений из Kafka и сохраняет их")
+  Component(query, "Сервис запросов", "Go", "Агрегации по времени, выборки по дому/устройству")
+  Component(repo, "Репозиторий телеметрии", "Go, pgx", "Запись и чтение временных рядов")
+}
+
+Rel(gateway, api, "Проксирует запросы", "REST")
+Rel(api, query, "Запрос показаний")
+Rel(query, repo, "Выборки и агрегации")
+Rel(consumer, repo, "Сохраняет измерение")
+Rel(consumer, kafka, "Подписан на события измерений")
+Rel(repo, telemetry_db, "SQL")
+
+@enduml

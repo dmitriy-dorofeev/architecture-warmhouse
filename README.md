@@ -71,15 +71,21 @@
 
 **Диаграмма контейнеров (Containers)**
 
-Добавьте диаграмму.
+[PlantUML-исходник](diagrams/container/warmhouse-containers.puml)
+![Диаграмма контейнеров](diagrams/container/warmhouse-containers.png)
 
 **Диаграмма компонентов (Components)**
 
-Добавьте диаграмму для каждого из выделенных микросервисов.
+[PlantUML-исходник](diagrams/component/device-service-components.puml)
+![Компоненты Device Service](diagrams/component/device-service-components.png)
+
+[PlantUML-исходник](diagrams/component/telemetry-service-components.puml)
+![Компоненты Telemetry Service](diagrams/component/telemetry-service-components.png)
 
 **Диаграмма кода (Code)**
 
-Добавьте одну диаграмму или несколько.
+[PlantUML-исходник](diagrams/code/device-command-sequence.puml)
+![Отправка команды устройству](diagrams/code/device-command-sequence.png)
 
 # Задание 3. Разработка ER-диаграммы
 
